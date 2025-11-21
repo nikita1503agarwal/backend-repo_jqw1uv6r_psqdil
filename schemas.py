@@ -1,48 +1,58 @@
 """
-Database Schemas
+Database Schemas for opps.cc
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
+Each Pydantic model maps to a MongoDB collection whose name is the lowercase class name.
 
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Collections:
+- User           -> "user"
+- Session        -> "session"
+- Profile        -> "profile"
+- Announcement   -> "announcement"
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, HttpUrl
+from typing import Optional, List, Literal
 
-# Example schemas (replace with your own):
 
 class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    email: str = Field(..., description="User email (unique)")
+    username: str = Field(..., min_length=3, max_length=24, pattern=r"^[a-z0-9_]+$", description="Public username (unique, lowercase)")
+    password_hash: str = Field(..., description="BCrypt password hash")
+    is_admin: bool = Field(False)
+    is_active: bool = Field(True)
 
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
 
-# Add your own schemas here:
-# --------------------------------------------------
+class Session(BaseModel):
+    user_id: str
+    token: str
+    user_agent: Optional[str] = None
+    ip: Optional[str] = None
+    expires_at: Optional[str] = None  # ISO string for simplicity
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+
+class Link(BaseModel):
+    id: str
+    title: str = Field(..., max_length=60)
+    url: str = Field(..., description="https://...")
+    style: Literal["black", "white", "glass"] = "glass"
+    order: int = 0
+
+
+class Profile(BaseModel):
+    user_id: str
+    username: str
+    display_name: str = Field(..., max_length=60)
+    bio: Optional[str] = Field("", max_length=200)
+    photo_url: Optional[str] = None
+    background: Literal["pure-black", "charcoal", "white-glass", "black-glass"] = "charcoal"
+    button_style: Literal["black", "white", "glass"] = "glass"
+    bio_align: Literal["left", "center"] = "center"
+    bio_size: Literal["sm", "md", "lg"] = "md"
+    letter_spacing: Literal["tight", "normal", "wide"] = "normal"
+    links: List[Link] = []
+
+
+class Announcement(BaseModel):
+    title: str
+    body: str
+    active: bool = True
